@@ -721,18 +721,6 @@ import SwiftGit2
             #expect(newStatus.count == 1)
             #expect(newStatus.first?.status == .indexNew)
         }
-
-        deinit {
-            let repo = try? fixtures.simpleRepository()
-
-            if let untrackedURL = repo?.directoryURL?.appendingPathComponent("untracked") {
-                try? FileManager.default.removeItem(at: untrackedURL)
-            }
-
-            if let readmeURL = repo?.directoryURL?.appendingPathComponent("README.md") {
-                try? FileManager.default.removeItem(at: readmeURL)
-            }
-        }
     }
 
     @Suite("Repository.commit") class RepositoryCommit: FixturesSpec {
