@@ -6,19 +6,19 @@
 //  Copyright (c) 2014 GitHub, Inc. All rights reserved.
 //
 
-import Quick
 import SwiftGit2
+import Testing
+import Clibgit2
 
-class FixturesSpec: QuickSpec {
-	override class func spec() {
-		beforeSuite {
-            _ = SwiftGit2Init()
-			Fixtures.sharedInstance.setUp()
-		}
+class FixturesSpec {
+    let fixtures: Fixtures
 
-		afterSuite {
-			Fixtures.sharedInstance.tearDown()
-            _ = SwiftGit2Shutdown()
-		}
-	}
+    init() throws {
+        _ = SwiftGit2Init()
+        self.fixtures = try Fixtures()
+    }
+
+    deinit {
+        _ = SwiftGit2Shutdown()
+    }
 }
