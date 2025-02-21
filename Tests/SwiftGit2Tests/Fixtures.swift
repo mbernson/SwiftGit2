@@ -15,9 +15,10 @@ final class Fixtures {
 
     // MARK: - Setup and Teardown
 
-	init() throws{
+	init() throws {
 		directoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
 			.appendingPathComponent("org.libgit2.SwiftGit2")
+            // Each instance of `Fixtures` gets a unique namespace
             .appendingPathComponent(UUID().uuidString)
         try setUp()
 	}
@@ -31,13 +32,9 @@ final class Fixtures {
     }
 
 	private func setUp() throws {
-		try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true, attributes: nil)
-
-		let zipURLs = Bundle.module.urls(forResourcesWithExtension: "zip", subdirectory: "Fixtures")!
-
-		for URL in zipURLs {
-			SSZipArchive.unzipFile(atPath: URL.path, toDestination: directoryURL.path)
-		}
+        // Create target directory for this set of fixtures
+		try FileManager.default.createDirectory(at: directoryURL,
+                                                withIntermediateDirectories: true, attributes: nil)
 	}
 
 	private func tearDown() throws {
@@ -47,7 +44,14 @@ final class Fixtures {
 	// MARK: - Helpers
 
 	func repository(named name: String) throws -> Repository {
-		let url = directoryURL.appendingPathComponent(name, isDirectory: true)
+        let url = directoryURL.appendingPathComponent(name, isDirectory: true)
+
+        // Lazily initialize the fixture repositories as they are requested
+        if !FileManager.default.fileExists(atPath: url.path) {
+            let zipPath = Bundle.module.path(forResource: name, ofType: "zip", inDirectory: "Fixtures")!
+            SSZipArchive.unzipFile(atPath: zipPath, toDestination: directoryURL.path)
+        }
+
         return try Repository.at(url).get()
 	}
 
