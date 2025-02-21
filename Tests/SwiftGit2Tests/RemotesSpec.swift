@@ -6,59 +6,57 @@
 //  Copyright (c) 2015 GitHub, Inc. All rights reserved.
 //
 
+import Foundation
+import Testing
 import SwiftGit2
-import Nimble
-import Quick
 import Clibgit2
 
 private extension Repository {
-	func withGitRemote<T>(named name: String, transform: (OpaquePointer) -> T) -> T {
-		let repository = self.pointer
+    func withGitRemote<T>(named name: String, transform: (OpaquePointer) -> T) -> T {
+        let repository = self.pointer
 
-		var pointer: OpaquePointer? = nil
-		git_remote_lookup(&pointer, repository, name)
-		let result = transform(pointer!)
-		git_remote_free(pointer)
+        var pointer: OpaquePointer? = nil
+        git_remote_lookup(&pointer, repository, name)
+        let result = transform(pointer!)
+        git_remote_free(pointer)
 
-		return result
-	}
+        return result
+    }
 }
 
-class RemoteSpec: FixturesSpec {
-	override class func spec() {
-		describe("Remote(pointer)") {
-			it("should initialize its properties") {
-				let repo = Fixtures.mantleRepository
-				let remote = repo.withGitRemote(named: "upstream") { Remote($0) }
+@Suite("Remote") class RemoteSpec {
+    @Suite("Remote(pointer)") class Initializer: FixturesSpec {
+        @Test("should initialize its properties") func initializer() throws {
+            let repo = try fixtures.mantleRepository()
+            let remote = repo.withGitRemote(named: "upstream") { Remote($0) }
 
-				expect(remote.name).to(equal("upstream"))
-				expect(remote.URL).to(equal("git@github.com:Mantle/Mantle.git"))
-			}
-		}
+            #expect(remote.name == "upstream")
+            #expect(remote.URL == "git@github.com:Mantle/Mantle.git")
+        }
+    }
 
-		describe("==(Remote, Remote)") {
-			it("should be true with equal objects") {
-				let repo = Fixtures.mantleRepository
-				let remote1 = repo.withGitRemote(named: "upstream") { Remote($0) }
-				let remote2 = remote1
-				expect(remote1).to(equal(remote2))
-			}
+    @Suite("==(Remote, Remote)") class Equality: FixturesSpec {
+        @Test("should be true with equal objects") func equal() throws {
+            let repo = try fixtures.mantleRepository()
+            let remote1 = repo.withGitRemote(named: "upstream") { Remote($0) }
+            let remote2 = remote1
+            #expect(remote1 == remote2)
+        }
 
-			it("should be false with unequal objcets") {
-				let repo = Fixtures.mantleRepository
-				let origin = repo.withGitRemote(named: "origin") { Remote($0) }
-				let upstream = repo.withGitRemote(named: "upstream") { Remote($0) }
-				expect(origin).notTo(equal(upstream))
-			}
-		}
+        @Test("should be false with unequal objcets") func unequal() throws {
+            let repo = try fixtures.mantleRepository()
+            let origin = repo.withGitRemote(named: "origin") { Remote($0) }
+            let upstream = repo.withGitRemote(named: "upstream") { Remote($0) }
+            #expect(origin != upstream)
+        }
+    }
 
-		describe("Remote.hashValue") {
-			it("should be equal with equal objcets") {
-				let repo = Fixtures.mantleRepository
-				let remote1 = repo.withGitRemote(named: "upstream") { Remote($0) }
-				let remote2 = remote1
-				expect(remote1.hashValue).to(equal(remote2.hashValue))
-			}
-		}
-	}
+    @Suite("Remote.hashValue") class HashValue: FixturesSpec {
+        @Test("should be equal with equal objcets") func equal() throws {
+            let repo = try fixtures.mantleRepository()
+            let remote1 = repo.withGitRemote(named: "upstream") { Remote($0) }
+            let remote2 = remote1
+            #expect(remote1.hashValue == remote2.hashValue)
+        }
+    }
 }

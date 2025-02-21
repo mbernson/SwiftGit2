@@ -18,8 +18,6 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/Quick/Quick.git", from: "7.0.0"),
-        .package(url: "https://github.com/Quick/Nimble.git", from: "13.0.0"),
         .package(url: "https://github.com/ZipArchive/ZipArchive.git", from: "2.5.5"),
     ],
     targets: [
@@ -29,7 +27,7 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftGit2Tests",
-            dependencies: ["SwiftGit2", "Clibgit2", "Quick", "Nimble", "ZipArchive"],
+            dependencies: ["SwiftGit2", "Clibgit2", "ZipArchive"],
             resources: [.copy("Fixtures")]
         ),
         .target(
