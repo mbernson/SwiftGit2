@@ -114,8 +114,12 @@ import SwiftGit2
             #expect(remote.URL == remoteRepo.directoryURL?.absoluteString)
         }
 
-        @Test("should be able to clone a remote repository") func cloneRemoteRepository() throws {
-            let remoteRepoURL = try #require(URL(string: "https://github.com/libgit2/TestGitRepository.git"))
+        @Test("should be able to clone a remote repository", arguments: [
+            URL(string: "https://github.com/libgit2/TestGitRepository.git"),
+            URL(string: "git@github.com:libgit2/TestGitRepository.git"),
+        ])
+        func cloneRemoteRepository(url: URL?) throws {
+            let remoteRepoURL = try #require(url)
             let localURL = temporaryURL(forPurpose: "public-remote-clone")
             let cloneResult = Repository.clone(from: remoteRepoURL, to: localURL)
 
