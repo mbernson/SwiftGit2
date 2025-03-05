@@ -129,36 +129,39 @@ import SwiftGit2
             #expect(remote.URL == remoteRepoURL.absoluteString)
         }
 
-//        let env = ProcessInfo.processInfo.environment
-//
-//        if let privateRepo = env["SG2TestPrivateRepo"],
-//           let gitUsername = env["SG2TestUsername"],
-//           let publicKey = env["SG2TestPublicKey"],
-//           let privateKey = env["SG2TestPrivateKey"],
-//           let passphrase = env["SG2TestPassphrase"] {
-//
-//            @Test("should be able to clone a remote repository requiring credentials") {
-//                let remoteRepoURL = URL(string: privateRepo)
-//                let localURL = temporaryURL(forPurpose: "private-remote-clone")
-//                let credentials = Credentials.sshMemory(username: gitUsername,
-//                                                        publicKey: publicKey,
-//                                                        privateKey: privateKey,
-//                                                        passphrase: passphrase)
-//
-//                let cloneResult = Repository.clone(from: remoteRepoURL!, to: localURL, credentials: credentials)
-//
-//                #expect(cloneResult.error == nil)
-//
-//                if case .success(let clonedRepo) = cloneResult {
-//                    let remoteResult = clonedRepo.remote(named: "origin")
-//                    #expect(remoteResult.error == nil)
-//
-//                    if case .success(let remote) = remoteResult {
-//                        #expect(remote.URL == remoteRepoURL?.absoluteString)
-//                    }
-//                }
-//            }
-//        }
+        @Test(
+            "should be able to clone a remote repository requiring credentials",
+            .enabled(if: ProcessInfo.processInfo.environment["SG2TestPrivateRepo"] != nil)
+        )
+        func cloneRemoteRepositoryWithCredentials() throws {
+            let env = ProcessInfo.processInfo.environment
+            guard let privateRepo = env["SG2TestPrivateRepo"],
+               let gitUsername = env["SG2TestUsername"],
+               let publicKey = env["SG2TestPublicKey"],
+               let privateKey = env["SG2TestPrivateKey"],
+               let passphrase = env["SG2TestPassphrase"]
+            else { return }
+
+            let remoteRepoURL = URL(string: privateRepo)
+            let localURL = temporaryURL(forPurpose: "private-remote-clone")
+            let credentials = Credentials.sshMemory(username: gitUsername,
+                                                    publicKey: publicKey,
+                                                    privateKey: privateKey,
+                                                    passphrase: passphrase)
+
+            let cloneResult = Repository.clone(from: remoteRepoURL!, to: localURL, credentials: credentials)
+
+            #expect(cloneResult.error == nil)
+
+            if case .success(let clonedRepo) = cloneResult {
+                let remoteResult = clonedRepo.remote(named: "origin")
+                #expect(remoteResult.error == nil)
+
+                if case .success(let remote) = remoteResult {
+                    #expect(remote.URL == remoteRepoURL?.absoluteString)
+                }
+            }
+        }
     }
 
     @Suite("Repository.blob(_:)") class BlobSpec: FixturesSpec {
@@ -286,14 +289,13 @@ import SwiftGit2
             #expect(result.map { $0 as! Commit }.value == commit)
         }
 
-// TODO
-//        @Test("should work with a tag") func tag() throws {
-//            let repo   = try fixtures.simpleRepository()
-//            let oid    = try #require(OID(string: "57943b8ee00348180ceeedc960451562750f6d33"))
-//            let tag    = repo.tag(oid).value
-//            let result = repo.object(oid)
-//            #expect(result.map { $0 as! Tag }.value == tag)
-//        }
+        @Test("should work with a tag") func tag() throws {
+            let repo   = try fixtures.simpleRepository()
+            let oid    = try #require(OID(string: "57943b8ee00348180ceeedc960451562750f6d33"))
+            let tag    = repo.tag(oid).value
+            let result = repo.object(oid)
+            #expect(result.map { $0 as! SwiftGit2.Tag }.value == tag)
+        }
 
         @Test("should work with a tree") func tree() throws {
             let repo   = try fixtures.simpleRepository()
@@ -339,15 +341,14 @@ import SwiftGit2
             #expect(repo.object(from: pointer).value == blob)
         }
 
-// TODO
-//        @Test("should work with tags") func tag() throws {
-//            let repo = try fixtures.simpleRepository()
-//            let oid = try #require(OID(string: "57943b8ee00348180ceeedc960451562750f6d33"))
-//
-//            let pointer = PointerTo<Tag>(oid)
-//            let tag = try #require(repo.tag(oid).value)
-//            #expect(repo.object(from: pointer).value == tag)
-//        }
+        @Test("should work with tags") func tag() throws {
+            let repo = try fixtures.simpleRepository()
+            let oid = try #require(OID(string: "57943b8ee00348180ceeedc960451562750f6d33"))
+
+            let pointer = PointerTo<SwiftGit2.Tag>(oid)
+            let tag = try #require(repo.tag(oid).value)
+            #expect(repo.object(from: pointer).value == tag)
+        }
     }
 
     @Suite("Repository.object(from: Pointer)") class FromPointer: FixturesSpec {
@@ -381,16 +382,15 @@ import SwiftGit2
             #expect(result.value == blob)
         }
 
-// TODO
-//        @Test("should work with tags") func tag() throws {
-//            let repo = try fixtures.simpleRepository()
-//            let oid = try #require(OID(string: "57943b8ee00348180ceeedc960451562750f6d33"))
-//
-//            let pointer = Pointer.tag(oid)
-//            let tag = try #require(repo.tag(oid).value)
-//            let result = repo.object(from: pointer).map { $0 as! Tag }
-//            #expect(result.value == tag)
-//        }
+        @Test("should work with tags") func tag() throws {
+            let repo = try fixtures.simpleRepository()
+            let oid = try #require(OID(string: "57943b8ee00348180ceeedc960451562750f6d33"))
+
+            let pointer = Pointer.tag(oid)
+            let tag = try #require(repo.tag(oid).value)
+            let result = repo.object(from: pointer).map { $0 as! SwiftGit2.Tag }
+            #expect(result.value == tag)
+        }
     }
 
     @Suite("Repository.allRemotes()") class AllRemotes: FixturesSpec {
