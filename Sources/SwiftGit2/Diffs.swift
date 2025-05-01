@@ -60,7 +60,7 @@ public struct Diff {
 		}
 	}
 
-	public struct Status: OptionSet {
+	public struct Status: OptionSet, Sendable {
 		// This appears to be necessary due to bug in Swift
 		// https://bugs.swift.org/browse/SR-3003
 		public init(rawValue: UInt32) {
@@ -84,7 +84,7 @@ public struct Diff {
 		public static let conflicted             = Status(rawValue: GIT_STATUS_CONFLICTED.rawValue)
 	}
 
-	public struct Flags: OptionSet {
+	public struct Flags: OptionSet, Sendable {
 		// This appears to be necessary due to bug in Swift
 		// https://bugs.swift.org/browse/SR-3003
 		public init(rawValue: UInt32) {

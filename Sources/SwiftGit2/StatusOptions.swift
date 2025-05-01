@@ -5,7 +5,7 @@
 import Clibgit2
 import Foundation
 
-public struct StatusOptions: OptionSet {
+public struct StatusOptions: OptionSet, Sendable {
 	public let rawValue: UInt32
 
 	public init(rawValue: UInt32) {
