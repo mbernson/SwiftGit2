@@ -24,7 +24,7 @@ private func checkoutProgressCallback(path: UnsafePointer<Int8>?, completedSteps
 			block = buffer.move()
 			buffer.deallocate()
 		}
-		block(path.flatMap(String.init(validatingUTF8:)), completedSteps, totalSteps)
+		block(path.flatMap(String.init(validatingCString:)), completedSteps, totalSteps)
 	}
 }
 
@@ -179,7 +179,7 @@ public final class Repository {
 		self.pointer = pointer
 
 		let path = git_repository_workdir(pointer)
-		self.directoryURL = path.map({ URL(fileURLWithPath: String(validatingUTF8: $0)!, isDirectory: true) })
+		self.directoryURL = path.map({ URL(fileURLWithPath: String(validatingCString: $0)!, isDirectory: true) })
 	}
 
 	deinit {

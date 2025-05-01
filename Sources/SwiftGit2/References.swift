@@ -56,8 +56,8 @@ public struct Reference: ReferenceType, Hashable {
 
 	/// Create an instance with a libgit2 `git_reference` object.
 	public init(_ pointer: OpaquePointer) {
-		let shorthand = String(validatingUTF8: git_reference_shorthand(pointer))!
-		longName = String(validatingUTF8: git_reference_name(pointer))!
+		let shorthand = String(validatingCString: git_reference_shorthand(pointer))!
+		longName = String(validatingCString: git_reference_name(pointer))!
 		shortName = (shorthand == longName ? nil : shorthand)
 		oid = OID(git_reference_target(pointer).pointee)
 	}
@@ -102,9 +102,9 @@ public struct Branch: ReferenceType, Hashable {
 		guard success == GIT_OK.rawValue else {
 			return nil
 		}
-		name = String(validatingUTF8: namePointer!)!
+		name = String(validatingCString: namePointer!)!
 
-		longName = String(validatingUTF8: git_reference_name(pointer))!
+		longName = String(validatingCString: git_reference_name(pointer))!
 
 		var oid: OID
 		if git_reference_type(pointer).rawValue == GIT_REFERENCE_SYMBOLIC.rawValue {
@@ -173,7 +173,7 @@ public enum TagReference: ReferenceType, Hashable {
 			return nil
 		}
 
-		let name = String(validatingUTF8: git_reference_name(pointer))!
+		let name = String(validatingCString: git_reference_name(pointer))!
 		let repo = git_reference_owner(pointer)
 		var oid = git_reference_target(pointer).pointee
 
