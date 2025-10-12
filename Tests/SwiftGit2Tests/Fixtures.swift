@@ -11,58 +11,61 @@ import ZipArchive
 
 final class Fixtures {
 
-	// MARK: Lifecycle
+    let directoryURL: URL
 
-	class var sharedInstance: Fixtures {
-		enum Singleton {
-			static let instance = Fixtures()
-		}
-		return Singleton.instance
-	}
+    // MARK: - Setup and Teardown
 
-	init() {
+	init() throws {
 		directoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
 			.appendingPathComponent("org.libgit2.SwiftGit2")
-			.appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString)
+            // Each instance of `Fixtures` gets a unique namespace
+            .appendingPathComponent(UUID().uuidString)
+        try setUp()
 	}
 
-	// MARK: - Setup and Teardown
+    deinit {
+        do {
+            try tearDown()
+        } catch {
+            print("Warning: failed to tear down fixtures: \(error)")
+        }
+    }
 
-	let directoryURL: URL
-
-	func setUp() {
-		try! FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true, attributes: nil)
-
-        let bundle = Bundle.module
-		let zipURLs = bundle.urls(forResourcesWithExtension: "zip", subdirectory: "Fixtures")!
-
-		for URL in zipURLs {
-			SSZipArchive.unzipFile(atPath: URL.path, toDestination: directoryURL.path)
-		}
+	private func setUp() throws {
+        // Create target directory for this set of fixtures
+		try FileManager.default.createDirectory(at: directoryURL,
+                                                withIntermediateDirectories: true, attributes: nil)
 	}
 
-	func tearDown() {
-		try! FileManager.default.removeItem(at: directoryURL)
+	private func tearDown() throws {
+		try FileManager.default.removeItem(at: directoryURL)
 	}
 
 	// MARK: - Helpers
 
-	func repository(named name: String) -> Repository {
-		let url = directoryURL.appendingPathComponent(name, isDirectory: true)
-        return Repository.at(url).value!
+	func repository(named name: String) throws -> Repository {
+        let url = directoryURL.appendingPathComponent(name, isDirectory: true)
+
+        // Lazily initialize the fixture repositories as they are requested
+        if !FileManager.default.fileExists(atPath: url.path) {
+            let zipPath = Bundle.module.path(forResource: name, ofType: "zip", inDirectory: "Fixtures")!
+            SSZipArchive.unzipFile(atPath: zipPath, toDestination: directoryURL.path)
+        }
+
+        return try Repository.at(url).get()
 	}
 
 	// MARK: - The Fixtures
 
-	class var detachedHeadRepository: Repository {
-		return Fixtures.sharedInstance.repository(named: "detached-head")
-	}
+    func detachedHeadRepository() throws -> Repository {
+        return try repository(named: "detached-head")
+    }
 
-	class var simpleRepository: Repository {
-		return Fixtures.sharedInstance.repository(named: "simple-repository")
-	}
+    func simpleRepository() throws -> Repository {
+        return try repository(named: "simple-repository")
+    }
 
-	class var mantleRepository: Repository {
-		return Fixtures.sharedInstance.repository(named: "Mantle")
-	}
+    func mantleRepository() throws -> Repository {
+        return try repository(named: "Mantle")
+    }
 }

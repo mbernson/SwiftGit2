@@ -7,66 +7,63 @@
 //
 
 import SwiftGit2
-import Nimble
-import Quick
+import Testing
 
-class OIDSpec: QuickSpec {
-	override class func spec() {
-		describe("OID(string:)") {
-			it("should be nil if string is too short") {
-				expect(OID(string: "123456789012345678901234567890123456789")).to(beNil())
-			}
+@Suite("OID") class OIDSpec {
+    @Suite("OID(string:)") struct InitializeWithString {
+        @Test("should be nil if string is too short") func tooShort() {
+            #expect(OID(string: "123456789012345678901234567890123456789") == nil)
+        }
 
-			it("should be nil if string is too long") {
-				expect(OID(string: "12345678901234567890123456789012345678901")).to(beNil())
-			}
+        @Test("should be nil if string is too long") func tooLong() {
+            #expect(OID(string: "12345678901234567890123456789012345678901") == nil)
+        }
 
-			it("should not be nil if string is just right") {
-				expect(OID(string: "1234567890123456789012345678ABCDEFabcdef")).notTo(beNil())
-			}
+        @Test("should not be nil if string is just right") func justRight() {
+            #expect(OID(string: "1234567890123456789012345678ABCDEFabcdef") != nil)
+        }
 
-			it("should be nil with non-hex characters") {
-				expect(OID(string: "123456789012345678901234567890123456789j")).to(beNil())
-			}
-		}
+        @Test("should be nil with non-hex characters") func invalidCharacters() {
+            #expect(OID(string: "123456789012345678901234567890123456789j") == nil)
+        }
+    }
 
-		describe("OID(oid)") {
-			it("should equal an OID with the same git_oid") {
-				let oid = OID(string: "1234567890123456789012345678901234567890")!
-				expect(OID(oid.oid)).to(equal(oid))
-			}
-		}
+    @Suite("OID(oid)") struct InitializeWithOID {
+        @Test("should equal an OID with the same git_oid") func equal() throws {
+            let oid = try #require(OID(string: "1234567890123456789012345678901234567890"))
+            #expect(OID(oid.oid) == oid)
+        }
+    }
 
-		describe("OID.description") {
-			it("should return the SHA") {
-				let SHA = "1234567890123456789012345678901234567890"
-				let oid = OID(string: SHA)!
-				expect(oid.description).to(equal(SHA))
-			}
-		}
+    @Suite("OID.description") struct Description {
+        @Test("should return the SHA") func sha() throws {
+            let SHA = "1234567890123456789012345678901234567890"
+            let oid = try #require(OID(string: SHA))
+            #expect(oid.description == SHA)
+        }
+    }
 
-		describe("==(OID, OID)") {
-			it("should be equal when identical") {
-				let SHA = "1234567890123456789012345678901234567890"
-				let oid1 = OID(string: SHA)!
-				let oid2 = OID(string: SHA)!
-				expect(oid1).to(equal(oid2))
-			}
+    @Suite("==(OID, OID)") struct Equality {
+        @Test("should be equal when identical") func equal() throws {
+            let SHA = "1234567890123456789012345678901234567890"
+            let oid1 = try #require(OID(string: SHA))
+            let oid2 = try #require(OID(string: SHA))
+            #expect(oid1 == oid2)
+        }
 
-			it("should be not equal when different") {
-				let oid1 = OID(string: "1234567890123456789012345678901234567890")!
-				let oid2 = OID(string: "0000000000000000000000000000000000000000")!
-				expect(oid1).notTo(equal(oid2))
-			}
-		}
+        @Test("should be not equal when different") func notEqual() throws {
+            let oid1 = try #require(OID(string: "1234567890123456789012345678901234567890"))
+            let oid2 = try #require(OID(string: "0000000000000000000000000000000000000000"))
+            #expect(oid1 != oid2)
+        }
+    }
 
-		describe("OID.hashValue") {
-			it("should be equal when OIDs are equal") {
-				let SHA = "1234567890123456789012345678901234567890"
-				let oid1 = OID(string: SHA)!
-				let oid2 = OID(string: SHA)!
-				expect(oid1.hashValue).to(equal(oid2.hashValue))
-			}
-		}
-	}
+    @Suite("OID.hashValue") struct HashValue {
+        @Test("should be equal when OIDs are equal") func equal() throws {
+            let SHA = "1234567890123456789012345678901234567890"
+            let oid1 = try #require(OID(string: SHA))
+            let oid2 = try #require(OID(string: SHA))
+            #expect(oid1.hashValue == oid2.hashValue)
+        }
+    }
 }

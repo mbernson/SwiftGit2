@@ -1,3 +1,5 @@
+import Foundation
+
 // Once Nimble adds matchers for the Result type, remove these shims and refactor the tests that use them.
 extension Result {
 	var value: Success? {
