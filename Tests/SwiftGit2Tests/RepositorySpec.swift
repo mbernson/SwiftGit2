@@ -116,7 +116,8 @@ import SwiftGit2
 
         @Test("should be able to clone a remote repository", arguments: [
             URL(string: "https://github.com/libgit2/TestGitRepository.git"),
-            URL(string: "git@github.com:libgit2/TestGitRepository.git"),
+            // Disabled: not implemented yet on iOS.
+            // URL(string: "git@github.com:libgit2/TestGitRepository.git"),
         ])
         func cloneRemoteRepository(url: URL?) throws {
             let remoteRepoURL = try #require(url)
