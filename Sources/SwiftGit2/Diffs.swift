@@ -26,12 +26,12 @@ public struct StatusEntry {
 	}
 }
 
-public struct Diff {
+public struct Diff: Hashable {
 
 	/// The set of deltas.
 	public var deltas = [Delta]()
 
-	public struct Delta {
+	public struct Delta: Hashable {
 		public var status: Status
 		public var flags: Flags
 		public var oldFile: File?
@@ -45,7 +45,7 @@ public struct Diff {
 		}
 	}
 
-	public struct File {
+	public struct File: Hashable {
 		public var oid: OID
 		public var path: String
 		public var size: UInt64
@@ -60,7 +60,7 @@ public struct Diff {
 		}
 	}
 
-	public struct Status: OptionSet {
+	public struct Status: OptionSet, Hashable {
 		// This appears to be necessary due to bug in Swift
 		// https://bugs.swift.org/browse/SR-3003
 		public init(rawValue: UInt32) {
@@ -84,7 +84,7 @@ public struct Diff {
 		public static let conflicted             = Status(rawValue: GIT_STATUS_CONFLICTED.rawValue)
 	}
 
-	public struct Flags: OptionSet {
+	public struct Flags: OptionSet, Hashable {
 		// This appears to be necessary due to bug in Swift
 		// https://bugs.swift.org/browse/SR-3003
 		public init(rawValue: UInt32) {
