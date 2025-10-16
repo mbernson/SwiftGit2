@@ -1,0 +1,13 @@
+# EditorConfig: https://editorconfig.org
+
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+# This project uses tabs for indentation
+[*.swift]
+indent_style = tab
