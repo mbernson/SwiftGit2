@@ -101,16 +101,24 @@ public struct Commit: ObjectType, Hashable {
 	/// The committer of the commit.
 	public let committer: Signature
 
+	/// The short "summary" (first line) of the commit message.
+	public let summary: String
+
 	/// The full message of the commit.
 	public let message: String
+
+	/// The timestamp of the commit
+	public let timestamp: Date
 
 	/// Create an instance with a libgit2 `git_commit` object.
 	public init(_ pointer: OpaquePointer) {
 		oid = OID(git_object_id(pointer).pointee)
+		summary = String(validatingUTF8: git_commit_summary(pointer))!
 		message = String(validatingUTF8: git_commit_message(pointer))!
 		author = Signature(git_commit_author(pointer).pointee)
 		committer = Signature(git_commit_committer(pointer).pointee)
 		tree = PointerTo(OID(git_commit_tree_id(pointer).pointee))
+		timestamp = Date(timeIntervalSince1970: TimeInterval(git_commit_time(pointer)))
 
 		self.parents = (0..<git_commit_parentcount(pointer)).map {
 			return PointerTo(OID(git_commit_parent_id(pointer, $0).pointee))
