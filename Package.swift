@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "SwiftGit2",
     platforms: [
-        .macOS(.v10_13),
+        .macOS(.v12),
         .iOS("15.5"),
         .tvOS(.v13),
         .visionOS(.v1),
@@ -23,7 +23,7 @@ let package = Package(
     targets: [
         .target(
             name: "SwiftGit2",
-            dependencies: ["Clibgit2"]
+            dependencies: ["Clibgit2", "Clibgit2Helpers"]
         ),
         .testTarget(
             name: "SwiftGit2Tests",
@@ -32,6 +32,7 @@ let package = Package(
         ),
         .target(
             name: "Clibgit2",
+            dependencies: ["OpenSSL", "libssh2"],
             path: "libgit2",
             exclude: [
                 "deps/llhttp/CMakeLists.txt",
@@ -75,6 +76,8 @@ let package = Package(
                   "-fno-modules",
                   // Disable warning: "implicit conversion loses integer precision"
                   "-Wno-single-bit-bitfield-constant-conversion",
+                  // Disable warning: Implicit conversion loses integer precision: 'long' to 'int'
+                  "-Wno-shorten-64-to-32",
                   // Disable warning: "a function definition without a prototype is deprecated"
                   "-Wno-deprecated-non-prototype",
                 ]),
@@ -86,10 +89,17 @@ let package = Package(
                 .headerSearchPath("src/libgit2"),
                 .headerSearchPath("src/util"),
 
-                .define("LIBGIT2_NO_FEATURES_H"),
-                .define("GIT_ARCH_64", to: "1"),
-                .define("GIT_QSORT_BSD", to: "1"),
+                // Library configuration
+                // libgit2 is configured using C header definitions. These define which features are enabled
+                // as well as what 'backend' provider to use for protocols such as HTTPS and SSH.
+                // Possible options can be seen here:
+                // https://github.com/libgit2/libgit2/blob/main/src/util/git2_features.h.in
+
+                .define("LIBGIT2_NO_FEATURES_H"), // We're not using a generated `git2_features.h` file
+                .define("GIT_ARCH_64", to: "1"), // 64-bit platform
+                .define("GIT_QSORT_BSD", to: "1"), // old-style FreeBSD qsort_r() has the 'context' parameter as the first argument
                 .define("GIT_IO_POLL", to: "1"),
+                .define("GIT_IO_SELECT", to: "1"),
 
                 // Git regex configuration
                 .define("GIT_REGEX_BUILTIN", to: "1"),
@@ -108,17 +118,21 @@ let package = Package(
 
                 // Git SSH transport configuration
                 .define("GIT_SSH", to: "1"),
-                .define("GIT_SSH_EXEC", to: "1"),
+                .define("GIT_SSH_LIBSSH2", to: "1"), // Use libssh2
+                .define("GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS", to: "1"),
 
                 // Git HTTPS transport configuration
                 .define("GIT_HTTPS", to: "1"),
                 .define("GIT_HTTPPARSER_BUILTIN", to: "1"),
-                .define("GIT_SECURE_TRANSPORT", to: "1"),
+                .define("GIT_OPENSSL", to: "1"), // Use OpenSSL
 
                 // Git cryptography configuration
                 .define("GIT_SHA1_COMMON_CRYPTO", to: "1"),
                 .define("GIT_SHA256_COMMON_CRYPTO", to: "1"),
             ]
         ),
+        .target(name: "Clibgit2Helpers", dependencies: ["Clibgit2"]),
+        .binaryTarget(name: "OpenSSL", path: "OpenSSL.xcframework"),
+        .binaryTarget(name: "libssh2", path: "libssh2.xcframework"),
     ]
 )

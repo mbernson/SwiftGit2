@@ -55,7 +55,8 @@ private func checkoutOptions(strategy: CheckoutStrategy,
 
 private func fetchOptions(credentials: Credentials) -> git_fetch_options {
 	let pointer = UnsafeMutablePointer<git_fetch_options>.allocate(capacity: 1)
-	git_fetch_init_options(pointer, UInt32(GIT_FETCH_OPTIONS_VERSION))
+    let resultInit = git_fetch_init_options(pointer, UInt32(GIT_FETCH_OPTIONS_VERSION))
+    assert(resultInit == GIT_OK.rawValue)
 
 	var options = pointer.move()
 
@@ -67,8 +68,12 @@ private func fetchOptions(credentials: Credentials) -> git_fetch_options {
 	return options
 }
 
-private func cloneOptions(bare: Bool = false, localClone: Bool = false, fetchOptions: git_fetch_options? = nil,
-                          checkoutOptions: git_checkout_options? = nil) -> git_clone_options {
+private func cloneOptions(
+    bare: Bool = false,
+    localClone: Bool = false,
+    fetchOptions: git_fetch_options? = nil,
+    checkoutOptions: git_checkout_options? = nil
+) -> git_clone_options {
 	let pointer = UnsafeMutablePointer<git_clone_options>.allocate(capacity: 1)
 	git_clone_init_options(pointer, UInt32(GIT_CLONE_OPTIONS_VERSION))
 
@@ -154,7 +159,8 @@ public final class Repository {
 			bare: bare,
 			localClone: localClone,
 			fetchOptions: fetchOptions(credentials: credentials),
-			checkoutOptions: checkoutOptions(strategy: checkoutStrategy, progress: checkoutProgress))
+			checkoutOptions: checkoutOptions(strategy: checkoutStrategy, progress: checkoutProgress)
+        )
 
 		var pointer: OpaquePointer? = nil
 		let remoteURLString = (remoteURL as NSURL).isFileReferenceURL() ? remoteURL.path : remoteURL.absoluteString
@@ -387,13 +393,10 @@ public final class Repository {
 	}
 
 	/// Download new data and update tips
-	public func fetch(_ remote: Remote) -> Result<(), NSError> {
+	public func fetch(_ remote: Remote, credentials: Credentials = .default) -> Result<(), NSError> {
 		return remoteLookup(named: remote.name) { remote in
 			remote.flatMap { pointer in
-				var opts = git_fetch_options()
-				let resultInit = git_fetch_init_options(&opts, UInt32(GIT_FETCH_OPTIONS_VERSION))
-				assert(resultInit == GIT_OK.rawValue)
-
+                var opts = fetchOptions(credentials: credentials)
 				let result = git_remote_fetch(pointer, nil, &opts, nil)
 				guard result == GIT_OK.rawValue else {
 					let err = NSError(gitError: result, pointOfFailure: "git_remote_fetch")
