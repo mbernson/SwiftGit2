@@ -14,11 +14,11 @@ jobs:
       matrix:
         xcode:
           # The '^' stands for a semantic version range
-          - ^15
           - ^16
         os: 
           - macos-14
           - macos-15
+          - macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -39,12 +39,13 @@ jobs:
         xcode:
           - ^16
         os:
-          - macos-15
+          - macos-26
         platform:
           - iOS
         platform-version:
           # The '^' stands for a semantic version range
           - ^18
+          - ^26
     steps:
       - name: Checkout
         uses: actions/checkout@v4
