@@ -105,9 +105,21 @@ private extension Repository {
             #expect(commit.oid == oid)
             #expect(commit.tree == tree)
             #expect(commit.parents == parents)
+            #expect(commit.summary == "List branches in README")
+            #expect(commit.body == nil)
             #expect(commit.message == "List branches in README\n")
+            #expect(commit.timestamp == Date(timeIntervalSince1970: 1417876367))
             #expect(commit.author == author)
             #expect(commit.committer == committer)
+        }
+
+        @Test("should set the body for a commit with a multi-line message") func body() throws {
+            let repo = try fixtures.mantleRepository()
+            let oid = try #require(OID(string: "d9dc95002cfbf3929d2b70d2c8a77e6bf5b1b88a"))
+
+            let commit = repo.withGitObject(oid) { Commit($0) }
+            #expect(commit.summary == "Merge pull request #437 from Mantle/pacify-xcode")
+            #expect(commit.body == "Pacify Xcode")
         }
 
         @Test("should handle 0 parents") func zeroParents() throws {
