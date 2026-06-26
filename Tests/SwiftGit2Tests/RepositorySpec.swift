@@ -621,13 +621,13 @@ import SwiftGit2
             let oid = try #require(OID(string: "315b3f344221db91ddc54b269f3c9af422da0f2e"))
             #expect(repo.HEAD().value?.shortName == "master")
 
-            #expect(repo.checkout(oid, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(oid, strategy: CheckoutStrategy.none).error == nil)
             let HEAD = repo.HEAD().value
             #expect(HEAD?.longName == "HEAD")
             #expect(HEAD?.oid == oid)
 
             let branch = try #require(repo.localBranch(named: "master").value)
-            #expect(repo.checkout(branch, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
             #expect(repo.HEAD().value?.shortName == "master")
         }
 
@@ -654,10 +654,10 @@ import SwiftGit2
             #expect(repo.HEAD().value?.longName == "HEAD")
 
             let branch = try #require(repo.localBranch(named: "another-branch").value)
-            #expect(repo.checkout(branch, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
             #expect(repo.HEAD().value?.shortName == branch.name)
 
-            #expect(repo.checkout(oid, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(oid, strategy: CheckoutStrategy.none).error == nil)
             #expect(repo.HEAD().value?.longName == "HEAD")
         }
     }
@@ -692,7 +692,7 @@ import SwiftGit2
         @Test("Should add the modification under a path") func addPath() throws {
             let repo = try fixtures.simpleRepository()
             let branch = try #require(repo.localBranch(named: "master").value)
-            #expect(repo.checkout(branch, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
 
             // make a change to README
             let readmeURL = try #require(repo.directoryURL?.appendingPathComponent("README.md"))
@@ -713,7 +713,7 @@ import SwiftGit2
         @Test("Should add an untracked file under a path") func addUntrackedPath() throws {
             let repo = try fixtures.simpleRepository()
             let branch = try #require(repo.localBranch(named: "master").value)
-            #expect(repo.checkout(branch, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
 
             // make a change to README
             let untrackedURL = try #require(repo.directoryURL?.appendingPathComponent("untracked"))
@@ -732,7 +732,7 @@ import SwiftGit2
         @Test("Should perform a simple commit with specified signature") func commit() throws {
             let repo = try fixtures.simpleRepository()
             let branch = repo.localBranch(named: "master").value!
-            #expect(repo.checkout(branch, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
 
             // make a change to README
             let untrackedURL = try #require(repo.directoryURL?.appendingPathComponent("untrackedtest"))
@@ -768,7 +768,7 @@ import SwiftGit2
 
             let repo = try fixtures.mantleRepository()
             let branch = try #require(repo.localBranch(named: "master").value)
-            #expect(repo.checkout(branch, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
 
             let status = repo.status()
 
@@ -797,7 +797,7 @@ import SwiftGit2
 
             let repoWithStatus = try fixtures.repository(named: "repository-with-status")
             let branchWithStatus = try #require(repoWithStatus.localBranch(named: "master").value)
-            #expect(repoWithStatus.checkout(branchWithStatus, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repoWithStatus.checkout(branchWithStatus, strategy: CheckoutStrategy.none).error == nil)
 
             let statuses = repoWithStatus.status().value!
 
@@ -854,7 +854,7 @@ import SwiftGit2
 
             let repo = try fixtures.mantleRepository()
             let branch = repo.localBranch(named: "master").value!
-            #expect(repo.checkout(branch, strategy: CheckoutStrategy.None).error == nil)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
 
             let head = repo.HEAD().value!
             let commit = repo.object(head.oid).value! as! Commit
@@ -881,7 +881,7 @@ import SwiftGit2
 
             let repo = try fixtures.mantleRepository()
             #expect(repo.checkout(try #require(OID(string: "047b931bd7f5478340cef5885a6fff713005f4d6")),
-                                 strategy: CheckoutStrategy.None).error == nil)
+                                 strategy: CheckoutStrategy.none).error == nil)
             let head = repo.HEAD().value!
             let initalCommit = repo.object(head.oid).value! as! Commit
             let diff = repo.diff(for: initalCommit).value!
@@ -949,7 +949,7 @@ import SwiftGit2
 
             let repo = try fixtures.mantleRepository()
             #expect(repo.checkout(try #require(OID(string: "d0d9c13da5eb5f9e8cf2a9f1f6ca3bdbe975b57d")),
-                                 strategy: CheckoutStrategy.None).error == nil)
+                                 strategy: CheckoutStrategy.none).error == nil)
             let head = try #require(repo.HEAD().value)
             let initalCommit = try #require(repo.object(head.oid).value as? Commit)
             let diff = repo.diff(for: initalCommit).value!
