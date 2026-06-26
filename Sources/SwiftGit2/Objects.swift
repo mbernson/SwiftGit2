@@ -118,6 +118,11 @@ public struct Commit: ObjectType, Hashable {
 	}
 }
 
+extension Commit: Identifiable {
+	/// The stable identity of the commit, equal to its OID.
+	public var id: OID { oid }
+}
+
 /// A git tree.
 public struct Tree: ObjectType, Hashable {
 	public static let type = GIT_OBJECT_TREE
