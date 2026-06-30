@@ -107,3 +107,97 @@ public struct Diff: Hashable {
 		}
 	}
 }
+
+public extension Diff {
+
+	/// A single delta together with its hunk-level diff content.
+	struct Patch: Hashable {
+		public var delta: Delta
+		public var hunks: [Hunk]
+		/// Number of added lines across all hunks.
+		public var additions: Int
+		/// Number of deleted lines across all hunks.
+		public var deletions: Int
+		/// Number of context (unchanged) lines across all hunks.
+		public var context: Int
+		/// The full unified-diff text for this delta. Empty for binary or
+		/// unchanged files, which have no textual patch.
+		public var text: String
+
+		public init(delta: Delta, hunks: [Hunk],
+		            additions: Int = 0, deletions: Int = 0, context: Int = 0,
+		            text: String = "") {
+			self.delta = delta
+			self.hunks = hunks
+			self.additions = additions
+			self.deletions = deletions
+			self.context = context
+			self.text = text
+		}
+	}
+
+	/// A contiguous range of changed lines within a delta, plus its context.
+	struct Hunk: Hashable {
+		public var oldStart: Int
+		public var oldLines: Int
+		public var newStart: Int
+		public var newLines: Int
+		/// The hunk header, e.g. `@@ -1,4 +1,6 @@ ...`.
+		public var header: String
+		public var lines: [Line]
+
+		public init(_ hunk: git_diff_hunk, lines: [Line]) {
+			self.oldStart = Int(hunk.old_start)
+			self.oldLines = Int(hunk.old_lines)
+			self.newStart = Int(hunk.new_start)
+			self.newLines = Int(hunk.new_lines)
+			self.lines = lines
+
+			// `header` is a fixed C char array, NUL-terminated within `header_len` bytes.
+			var hunk = hunk
+			self.header = withUnsafeBytes(of: &hunk.header) { raw in
+				let bytes = raw.bindMemory(to: UInt8.self)
+				let count = min(Int(hunk.header_len), bytes.count)
+				return String(decoding: bytes[0..<count], as: UTF8.self)
+			}
+		}
+	}
+
+	/// A single line (or data span) within a hunk.
+	struct Line: Hashable {
+
+		/// Where a line came from. Mirrors `git_diff_line_t` for the values that
+		/// are delivered while walking a diff (the print-only origins are omitted).
+		public enum Origin: Character {
+			case context     = " "
+			case addition    = "+"
+			case deletion    = "-"
+			case contextEOFNL = "="
+			case addEOFNL    = ">"
+			case delEOFNL    = "<"
+		}
+
+		public var origin: Origin
+		/// Line number in the old file, or -1 for an added line.
+		public var oldLineno: Int
+		/// Line number in the new file, or -1 for a deleted line.
+		public var newLineno: Int
+		/// The line's text content.
+		public var content: String
+
+		public init(_ line: git_diff_line) {
+			// Unknown / print-only origins fall back to `.context` so the walk never crashes.
+			self.origin = Origin(rawValue: Character(UnicodeScalar(UInt8(bitPattern: line.origin)))) ?? .context
+			self.oldLineno = Int(line.old_lineno)
+			self.newLineno = Int(line.new_lineno)
+
+			// `content` is not NUL-terminated; it's a span of `content_len` bytes.
+			if let contentPtr = line.content, line.content_len > 0 {
+				let buffer = UnsafeRawBufferPointer(start: contentPtr, count: line.content_len)
+				self.content = String(decoding: buffer, as: UTF8.self)
+			} else {
+				self.content = ""
+			}
+		}
+	}
+}

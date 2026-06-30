@@ -966,6 +966,110 @@ import SwiftGit2
             #expect(oldFilePaths == expectedOldFilePaths)
         }
     }
+
+    @Suite("Repository.patches") class RepositoryPatches: FixturesSpec {
+        @Test("Should expose hunks and lines for a commit") func commitHunks() throws {
+            let repo = try fixtures.mantleRepository()
+            let oid = try #require(OID(string: "047b931bd7f5478340cef5885a6fff713005f4d6"))
+            let commit = try #require(repo.object(oid).value as? Commit)
+
+            let patches = try #require(repo.patches(for: commit).value)
+
+            // The initial commit adds .gitignore and README.md.
+            #expect(patches.count == 2)
+
+            let readme = try #require(patches.first { $0.delta.newFile?.path == "README.md" })
+            #expect(!readme.hunks.isEmpty)
+
+            let firstHunk = try #require(readme.hunks.first)
+            #expect(firstHunk.header.hasPrefix("@@"))
+            #expect(!firstHunk.lines.isEmpty)
+
+            // An initial commit is all additions: positive additions, zero deletions,
+            // and the added-line count matches the actual `.addition` lines.
+            #expect(readme.additions > 0)
+            #expect(readme.deletions == 0)
+            let addedLineCount = readme.hunks.flatMap(\.lines).filter { $0.origin == .addition }.count
+            #expect(readme.additions == addedLineCount)
+
+            // The unified-diff text includes the hunk header and an added line.
+            #expect(readme.text.contains(firstHunk.header))
+            #expect(readme.text.contains("\n+"))
+
+            // An initial commit only adds lines — no deletions, and every added
+            // line comes from an empty old file (aside from EOFNL markers).
+            let origins = readme.hunks.flatMap(\.lines).map(\.origin)
+            #expect(origins.contains(.addition))
+            #expect(!origins.contains(.deletion))
+            for line in readme.hunks.flatMap(\.lines) where line.origin == .addition {
+                #expect(line.oldLineno == -1)
+                #expect(line.newLineno >= 1)
+            }
+        }
+
+        @Test("Should walk a large diff without failing") func largeDiff() throws {
+            let repo = try fixtures.mantleRepository()
+            let branch = try #require(repo.localBranch(named: "master").value)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
+
+            let head = try #require(repo.HEAD().value)
+            let commit = try #require(repo.object(head.oid).value as? Commit)
+
+            // A patch is produced for every delta (binary/empty deltas yield empty hunks).
+            let patches = try #require(repo.patches(for: commit).value)
+            #expect(!patches.isEmpty)
+            let totalLines = patches.flatMap { $0.hunks }.flatMap(\.lines).count
+            #expect(totalLines > 0)
+        }
+
+        @Test("Should yield a hunk-less patch for a binary file") func binaryDelta() throws {
+            let repo = try fixtures.simpleRepository()
+            let branch = try #require(repo.localBranch(named: "master").value)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
+
+            // A NUL byte makes libgit2 treat the file as binary: there are no
+            // line-level hunks, and no addition/deletion counts. (Depending on the
+            // libgit2 version/options this comes back either as a NULL patch or as a
+            // patch with the "Binary files differ" marker — both are handled.)
+            let binaryURL = try #require(repo.directoryURL?.appendingPathComponent("binary.dat"))
+            try Data([0x00, 0x01, 0x02, 0x00, 0xFF]).write(to: binaryURL)
+            #expect(repo.add(path: "binary.dat").error == nil)
+
+            let staged = try #require(repo.diffTreeToIndex().value)
+            let patch = try #require(staged.first { $0.delta.newFile?.path == "binary.dat" })
+            #expect(patch.hunks.isEmpty)
+            #expect(patch.additions == 0)
+            #expect(patch.deletions == 0)
+        }
+
+        @Test("Should report staged and unstaged changes with line content") func workdirAndIndex() throws {
+            let repo = try fixtures.simpleRepository()
+            let branch = try #require(repo.localBranch(named: "master").value)
+            #expect(repo.checkout(branch, strategy: CheckoutStrategy.none).error == nil)
+
+            let readmeURL = try #require(repo.directoryURL?.appendingPathComponent("README.md"))
+            let data = try #require("different content\n".data(using: .utf8))
+            try data.write(to: readmeURL)
+
+            // Unstaged change shows up in the index-to-workdir diff.
+            let unstaged = try #require(repo.diffIndexToWorkdir().value)
+            #expect(unstaged.contains { $0.delta.newFile?.path == "README.md" })
+
+            #expect(repo.add(path: "README.md").error == nil)
+
+            // Once staged, it shows up in the tree-to-index (HEAD) diff instead.
+            let staged = try #require(repo.diffTreeToIndex().value)
+            let patch = try #require(staged.first { $0.delta.newFile?.path == "README.md" })
+            #expect(!patch.hunks.isEmpty)
+
+            let lines = patch.hunks.flatMap(\.lines)
+            #expect(lines.contains { $0.origin == .addition })
+
+            // Line content decodes correctly.
+            let addedContent = lines.filter { $0.origin == .addition }.map(\.content).joined()
+            #expect(addedContent.contains("different content"))
+        }
+    }
 }
 
 private func temporaryURL(forPurpose purpose: String) -> URL {

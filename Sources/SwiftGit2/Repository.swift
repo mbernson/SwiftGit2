@@ -865,6 +865,172 @@ public final class Repository {
 		return result
 	}
 
+	// MARK: - Patches
+
+	/// The hunk-level patches for a commit, diffed against its first parent
+	/// (or against an empty tree for the initial commit).
+	public func patches(for commit: Commit) -> Result<[Diff.Patch], NSError> {
+		return patches(from: commit.parents.first?.oid, to: commit.oid)
+	}
+
+	/// The hunk-level patches between two commits' trees. Pass `nil` to diff
+	/// against an empty tree (e.g. the initial commit, or a full deletion).
+	public func patches(from oldCommit: OID?, to newCommit: OID?) -> Result<[Diff.Patch], NSError> {
+		return unsafeDiff(from: oldCommit, to: newCommit).flatMap { diff in
+			defer { git_diff_free(diff) }
+			return patches(from: diff)
+		}
+	}
+
+	/// The hunk-level patches of the unstaged changes (index vs. working directory).
+	public func diffIndexToWorkdir() -> Result<[Diff.Patch], NSError> {
+		return unsafeIndex().flatMap { index in
+			defer { git_index_free(index) }
+			var diff: OpaquePointer? = nil
+			let result = git_diff_index_to_workdir(&diff, self.pointer, index, nil)
+			guard result == GIT_OK.rawValue, let diff = diff else {
+				return .failure(NSError(gitError: result, pointOfFailure: "git_diff_index_to_workdir"))
+			}
+			defer { git_diff_free(diff) }
+			return patches(from: diff)
+		}
+	}
+
+	/// The hunk-level patches of the staged changes (a commit's tree vs. the index).
+	/// `commit` defaults to HEAD, so the no-argument call returns the staged diff.
+	public func diffTreeToIndex(_ commit: OID? = nil) -> Result<[Diff.Patch], NSError> {
+		let commitOid: OID
+		if let commit = commit {
+			commitOid = commit
+		} else {
+			switch HEAD() {
+			case .success(let ref):
+				commitOid = ref.oid
+			case .failure(let error):
+				return .failure(error)
+			}
+		}
+
+		return unsafeTreeForCommitId(commitOid).flatMap { tree in
+			defer { git_object_free(tree) }
+			return unsafeIndex().flatMap { index in
+				defer { git_index_free(index) }
+				var diff: OpaquePointer? = nil
+				let result = git_diff_tree_to_index(&diff, self.pointer, tree, index, nil)
+				guard result == GIT_OK.rawValue, let diff = diff else {
+					return .failure(NSError(gitError: result, pointOfFailure: "git_diff_tree_to_index"))
+				}
+				defer { git_diff_free(diff) }
+				return patches(from: diff)
+			}
+		}
+	}
+
+	/// Build a tree-to-tree `git_diff`. The caller is responsible for freeing the diff.
+	private func unsafeDiff(from oldCommitOid: OID?, to newCommitOid: OID?) -> Result<OpaquePointer, NSError> {
+		assert(oldCommitOid != nil || newCommitOid != nil, "It is an error to pass nil for both the oldOid and newOid")
+
+		var oldTree: OpaquePointer? = nil
+		defer { git_object_free(oldTree) }
+		if let oid = oldCommitOid {
+			switch unsafeTreeForCommitId(oid) {
+			case .failure(let error):
+				return .failure(error)
+			case .success(let value):
+				oldTree = value
+			}
+		}
+
+		var newTree: OpaquePointer? = nil
+		defer { git_object_free(newTree) }
+		if let oid = newCommitOid {
+			switch unsafeTreeForCommitId(oid) {
+			case .failure(let error):
+				return .failure(error)
+			case .success(let value):
+				newTree = value
+			}
+		}
+
+		var diff: OpaquePointer? = nil
+		let result = git_diff_tree_to_tree(&diff, self.pointer, oldTree, newTree, nil)
+		guard result == GIT_OK.rawValue, let diff = diff else {
+			return .failure(NSError(gitError: result, pointOfFailure: "git_diff_tree_to_tree"))
+		}
+		return .success(diff)
+	}
+
+	/// Walk a live `git_diff`, building a `Diff.Patch` per delta with its hunks and lines.
+	private func patches(from diff: OpaquePointer) -> Result<[Diff.Patch], NSError> {
+		var result = [Diff.Patch]()
+
+		for i in 0..<git_diff_num_deltas(diff) {
+			var patchPointer: OpaquePointer? = nil
+			let patchResult = git_patch_from_diff(&patchPointer, diff, i)
+			guard patchResult == GIT_OK.rawValue else {
+				return .failure(NSError(gitError: patchResult, pointOfFailure: "git_patch_from_diff"))
+			}
+
+			// For an unchanged or binary file libgit2 returns GIT_OK with a NULL
+			// patch (the delta's `binary` flag is set). Emit a hunk-less Patch so
+			// the file still appears in the result.
+			guard let patch = patchPointer else {
+				if let delta = git_diff_get_delta(diff, i) {
+					result.append(Diff.Patch(delta: Diff.Delta(delta.pointee), hunks: []))
+				}
+				continue
+			}
+			defer { git_patch_free(patch) }
+
+			let delta = Diff.Delta(git_patch_get_delta(patch).pointee)
+
+			var hunks = [Diff.Hunk]()
+			for h in 0..<git_patch_num_hunks(patch) {
+				var hunkPointer: UnsafePointer<git_diff_hunk>? = nil
+				var lineCount: Int = 0
+				let hunkResult = git_patch_get_hunk(&hunkPointer, &lineCount, patch, h)
+				guard hunkResult == GIT_OK.rawValue, let hunkPtr = hunkPointer else {
+					return .failure(NSError(gitError: hunkResult, pointOfFailure: "git_patch_get_hunk"))
+				}
+
+				var lines = [Diff.Line]()
+				for l in 0..<lineCount {
+					var linePointer: UnsafePointer<git_diff_line>? = nil
+					let lineResult = git_patch_get_line_in_hunk(&linePointer, patch, h, l)
+					guard lineResult == GIT_OK.rawValue, let linePtr = linePointer else {
+						return .failure(NSError(gitError: lineResult, pointOfFailure: "git_patch_get_line_in_hunk"))
+					}
+					lines.append(Diff.Line(linePtr.pointee))
+				}
+
+				hunks.append(Diff.Hunk(hunkPtr.pointee, lines: lines))
+			}
+
+			var context = 0, additions = 0, deletions = 0
+			let statsResult = git_patch_line_stats(&context, &additions, &deletions, patch)
+			guard statsResult == GIT_OK.rawValue else {
+				return .failure(NSError(gitError: statsResult, pointOfFailure: "git_patch_line_stats"))
+			}
+
+			var buf = git_buf()
+			defer { git_buf_free(&buf) }
+			let bufResult = git_patch_to_buf(&buf, patch)
+			guard bufResult == GIT_OK.rawValue else {
+				return .failure(NSError(gitError: bufResult, pointOfFailure: "git_patch_to_buf"))
+			}
+			var text = ""
+			if let ptr = buf.ptr, buf.size > 0 {
+				text = String(decoding: UnsafeRawBufferPointer(start: ptr, count: buf.size), as: UTF8.self)
+			}
+
+			result.append(Diff.Patch(delta: delta, hunks: hunks,
+			                         additions: additions, deletions: deletions, context: context,
+			                         text: text))
+		}
+
+		return .success(result)
+	}
+
 	private func safeTreeForCommitId(_ oid: OID) -> Result<Tree, NSError> {
 		return withGitObject(oid, type: GIT_OBJECT_COMMIT) { commit in
 			let treeId = git_commit_tree_id(commit)
