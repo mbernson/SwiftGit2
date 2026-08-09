@@ -636,7 +636,7 @@ import SwiftGit2
             let oid = try #require(OID(string: "315b3f344221db91ddc54b269f3c9af422da0f2e"))
             #expect(repo.HEAD().value?.shortName == "master")
 
-            let result = repo.checkout(oid, strategy: .None, progress: { (_, completedSteps, totalSteps) -> Void in
+            let result = repo.checkout(oid, strategy: .none, progress: { (_, completedSteps, totalSteps) -> Void in
                 #expect(completedSteps <= totalSteps)
             })
             #expect(result.error == nil)
