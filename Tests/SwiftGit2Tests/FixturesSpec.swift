@@ -10,15 +10,23 @@ import SwiftGit2
 import Testing
 import Clibgit2
 
-class FixturesSpec {
-    let fixtures: Fixtures
-
+/// Base class for every suite that touches libgit2. Calling into libgit2 before `SwiftGit2Init()` is
+/// undefined behaviour: its error reporting then writes through an uninitialized thread-local key.
+class Libgit2Spec {
     init() throws {
-        _ = SwiftGit2Init()
-        self.fixtures = try Fixtures()
+        _ = try SwiftGit2Init().get()
     }
 
     deinit {
         _ = SwiftGit2Shutdown()
+    }
+}
+
+class FixturesSpec: Libgit2Spec {
+    let fixtures: Fixtures
+
+    override init() throws {
+        self.fixtures = try Fixtures()
+        try super.init()
     }
 }

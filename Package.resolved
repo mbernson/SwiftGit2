@@ -1,14 +1,33 @@
 {
+  "originHash" : "634b0ff646dba534b54706d4547939f7d1db1eb45aee3cb0d80544dbd9bfe123",
   "pins" : [
+    {
+      "identity" : "libssh2-apple",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mbernson/libssh2-Apple.git",
+      "state" : {
+        "revision" : "0fee91f003786d23f5c11fbcb16c6234fa5df071",
+        "version" : "1.11.1"
+      }
+    },
+    {
+      "identity" : "openssl-apple",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mbernson/OpenSSL-Apple.git",
+      "state" : {
+        "revision" : "2f414e4dca7195b63e3af70d5037c242cffe8caf",
+        "version" : "4.0.3"
+      }
+    },
     {
       "identity" : "ziparchive",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ZipArchive/ZipArchive.git",
       "state" : {
-        "revision" : "79d4dc9729096c6ad83dd3cee2b9f354d1b4ab7b",
-        "version" : "2.5.5"
+        "revision" : "df35718ea19a94e015b91dc4881dee028ce4cdba",
+        "version" : "2.6.0"
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

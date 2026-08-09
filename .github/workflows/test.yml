@@ -8,11 +8,20 @@ on:
 
 jobs:
   build:
+    name: Test (${{ matrix.backends.name }})
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backends:
+          - name: SecureTransport + ssh exec
+            flags: ""
+          - name: OpenSSL + libssh2
+            flags: --traits OpenSSL,LibSSH2
 
     steps:
     - uses: actions/checkout@v6
       with:
         submodules: true
     - name: Run tests
-      run: swift test
+      run: swift test ${{ matrix.backends.flags }}

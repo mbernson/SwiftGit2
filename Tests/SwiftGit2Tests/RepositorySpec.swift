@@ -10,6 +10,21 @@ import Foundation
 import Testing
 import SwiftGit2
 
+#if OPENSSL
+private let hasOpenSSL = true
+#else
+private let hasOpenSSL = false
+#endif
+
+#if LIBSSH2
+private let hasLibSSH2 = true
+#else
+private let hasLibSSH2 = false
+#endif
+
+/// GitHub requires authentication for SSH even on public repositories, so the SSH clone needs a key in an agent.
+private let hasSSHAgent = ProcessInfo.processInfo.environment["SSH_AUTH_SOCK"] != nil
+
 // swiftlint:disable cyclomatic_complexity
 
 @Suite("Repository") class RepositorySpec {
@@ -114,15 +129,24 @@ import SwiftGit2
             #expect(remote.URL == remoteRepo.directoryURL?.absoluteString)
         }
 
-        @Test("should be able to clone a remote repository", arguments: [
+        @Test("should be able to clone a remote repository over HTTPS", .enabled(if: hasOpenSSL), arguments: [
             URL(string: "https://github.com/libgit2/TestGitRepository.git"),
-            // Disabled: not implemented yet on iOS.
-            // URL(string: "git@github.com:libgit2/TestGitRepository.git"),
         ])
-        func cloneRemoteRepository(url: URL?) throws {
+        func cloneRemoteRepositoryHTTPS(url: URL?) throws {
+            try cloneRemoteRepository(url: url, credentials: .default)
+        }
+
+		@Test("should be able to clone a remote repository over SSH", .enabled(if: hasLibSSH2 && hasSSHAgent), .disabled("Hangs forever when there is an SSH agent"), arguments: [
+            URL(string: "ssh://git@github.com/libgit2/TestGitRepository.git"),
+        ])
+        func cloneRemoteRepositorySSH(url: URL?) throws {
+            try cloneRemoteRepository(url: url, credentials: .sshAgent)
+        }
+
+        private func cloneRemoteRepository(url: URL?, credentials: Credentials) throws {
             let remoteRepoURL = try #require(url)
             let localURL = temporaryURL(forPurpose: "public-remote-clone")
-            let cloneResult = Repository.clone(from: remoteRepoURL, to: localURL)
+            let cloneResult = Repository.clone(from: remoteRepoURL, to: localURL, credentials: credentials)
 
             #expect(cloneResult.error == nil)
 

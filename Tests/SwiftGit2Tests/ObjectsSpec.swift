@@ -177,7 +177,7 @@ private extension Repository {
 }
 
 @Suite("Tree.Entry") class TreeEntrySpec {
-    @Suite("Tree.Entry(attributes:object:name:)") class InitializerWithProperties {
+    @Suite("Tree.Entry(attributes:object:name:)") class InitializerWithProperties: Libgit2Spec {
         @Test("should set its properties") func shouldSetProperties() throws {
             let attributes = Int32(GIT_FILEMODE_BLOB.rawValue)
             let object = Pointer.blob(try #require(OID(string: "41078396f5187daed5f673e4a13b185bbad71fba")))

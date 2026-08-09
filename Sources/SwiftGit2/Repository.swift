@@ -161,6 +161,7 @@ public final class Repository {
 		let result = localURL.withUnsafeFileSystemRepresentation { localPath in
 			git_clone(&pointer, remoteURLString, localPath, &options)
 		}
+		Credentials.release(options.fetch_opts.callbacks.payload)
 
 		guard result == GIT_OK.rawValue else {
 			return Result.failure(NSError(gitError: result, pointOfFailure: "git_clone"))
