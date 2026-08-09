@@ -1,0 +1,63 @@
+name: Build libssh2 XCFramework
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  LIBSSH2_VERSION: 1.11.1
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    env:
+      MACOS_DEPLOYMENT_TARGET: 11.0
+
+    steps:
+      - name: Download libssh2 source code
+        run: |
+          curl -LO https://libssh2.org/download/libssh2-$LIBSSH2_VERSION.tar.gz
+          tar xzf libssh2-$LIBSSH2_VERSION.tar.gz -C ./
+          echo "SOURCE_ROOT=$(pwd)/libssh2-$LIBSSH2_VERSION" >> "$GITHUB_ENV"
+
+      - name: Prepare build directory
+        run: |
+          echo "BUILD_ROOT=$(mktemp -d -t libssh2-macos)" >> "$GITHUB_ENV"
+
+      - name: Generate Xcode project
+        run: |
+          cmake -S "$SOURCE_ROOT" -B "$BUILD_ROOT" \
+            -G Xcode \
+            -DBUILD_STATIC_LIBS=ON \
+            -DCMAKE_OSX_SYSROOT=$(xcrun --sdk macosx --show-sdk-path) \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.MACOS_DEPLOYMENT_TARGET }} \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCRYPTO_BACKEND=OpenSSL
+
+      - name: Build for macOS
+        working-directory: ${{ env.BUILD_ROOT }}
+        run: |
+          xcodebuild archive \
+            -project libssh2.xcodeproj \
+            -scheme libssh2_static \
+            -destination "generic/platform=macOS" \
+            -archivePath "$BUILD_ROOT/libssh2-macOS.xcarchive" \
+            INSTALL_PATH="/" \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            ARCHS='$(ARCHS_STANDARD)'
+
+      - name: Create XCFramework
+        run: |
+          xcodebuild -create-xcframework \
+            -library "$BUILD_ROOT/libssh2-macOS.xcarchive/Products/libssh2.a" \
+            -headers "$SOURCE_ROOT/include" \
+            -output "libssh2.xcframework"
+
+      - name: Upload XCFramework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libssh2.xcframework
+          path: libssh2.xcframework
