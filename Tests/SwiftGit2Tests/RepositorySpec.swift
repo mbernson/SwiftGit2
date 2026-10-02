@@ -10,16 +10,16 @@ import Foundation
 import Testing
 import SwiftGit2
 
-#if OPENSSL
-private let hasOpenSSL = true
+#if OpenSSL || SecureTransport
+private let hasHTTPSEnabled = true
 #else
-private let hasOpenSSL = false
+private let hasHTTPSEnabled = false
 #endif
 
-#if LIBSSH2
-private let hasLibSSH2 = true
+#if LIBSSH2 || SSHExec
+private let hasSSHEnabled = true
 #else
-private let hasLibSSH2 = false
+private let hasSSHEnabled = false
 #endif
 
 /// GitHub requires authentication for SSH even on public repositories, so the SSH clone needs a key in an agent.
@@ -129,14 +129,14 @@ private let hasSSHAgent = ProcessInfo.processInfo.environment["SSH_AUTH_SOCK"] !
             #expect(remote.URL == remoteRepo.directoryURL?.absoluteString)
         }
 
-        @Test("should be able to clone a remote repository over HTTPS", .enabled(if: hasOpenSSL), arguments: [
+        @Test("should be able to clone a remote repository over HTTPS", .enabled(if: hasHTTPSEnabled), arguments: [
             URL(string: "https://github.com/libgit2/TestGitRepository.git"),
         ])
         func cloneRemoteRepositoryHTTPS(url: URL?) throws {
             try cloneRemoteRepository(url: url, credentials: .default)
         }
 
-		@Test("should be able to clone a remote repository over SSH", .enabled(if: hasLibSSH2 && hasSSHAgent), .disabled("Hangs forever when there is an SSH agent"), arguments: [
+		@Test("should be able to clone a remote repository over SSH", .enabled(if: hasSSHEnabled && hasSSHAgent), .disabled("Hangs forever when there is an SSH agent"), arguments: [
             URL(string: "ssh://git@github.com/libgit2/TestGitRepository.git"),
         ])
         func cloneRemoteRepositorySSH(url: URL?) throws {
