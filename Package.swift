@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.1
 
 import PackageDescription
 
@@ -17,21 +17,46 @@ let package = Package(
             targets: ["SwiftGit2"]
         ),
     ],
+    // libgit2 compiles exactly one HTTPS backend and one SSH backend, so the defaults are traits too:
+    // enabling OpenSSL or LibSSH2 replaces them rather than adding to them.
+    traits: [
+        .trait(name: "SecureTransport", description: "HTTPS through Apple's Security framework."),
+        .trait(name: "SSHExec", description: "SSH by running the system ssh executable. Not available on iOS."),
+        .trait(name: "OpenSSL", description: "HTTPS through precompiled OpenSSL."),
+        .trait(name: "LibSSH2", description: "SSH through precompiled libssh2.", enabledTraits: ["OpenSSL"]),
+        .default(enabledTraits: ["SecureTransport", "SSHExec"]),
+    ],
     dependencies: [
         .package(url: "https://github.com/ZipArchive/ZipArchive.git", from: "2.5.5"),
+        .package(url: "https://github.com/mbernson/OpenSSL-Apple.git", from: "4.0.3"),
+        .package(url: "https://github.com/mbernson/libssh2-Apple.git", from: "1.11.1"),
     ],
     targets: [
         .target(
             name: "SwiftGit2",
-            dependencies: ["Clibgit2"]
+            dependencies: ["Clibgit2", "Clibgit2Shims"]
         ),
         .testTarget(
             name: "SwiftGit2Tests",
             dependencies: ["SwiftGit2", "Clibgit2", "ZipArchive"],
-            resources: [.copy("Fixtures")]
+            resources: [.copy("Fixtures")],
+            swiftSettings: [
+                .define("OPENSSL", .when(traits: ["OpenSSL"])),
+                .define("LIBSSH2", .when(traits: ["LibSSH2"])),
+            ]
+        ),
+        // The `git_libgit2_opts` function from libgit2 is not callable from Swift because it uses variadic arguments.
+		// This target with some glue code is needed to be able to use it from Swift.
+        .target(
+            name: "Clibgit2Shims",
+            dependencies: ["Clibgit2"]
         ),
         .target(
             name: "Clibgit2",
+            dependencies: [
+                .product(name: "OpenSSL", package: "OpenSSL-Apple", condition: .when(traits: ["OpenSSL"])),
+                .product(name: "libssh2", package: "libssh2-Apple", condition: .when(traits: ["LibSSH2"])),
+            ],
             path: "libgit2",
             exclude: [
                 "deps/llhttp/CMakeLists.txt",
@@ -88,6 +113,7 @@ let package = Package(
 
                 .define("LIBGIT2_NO_FEATURES_H"),
                 .define("GIT_ARCH_64", to: "1"),
+                .define("GIT_THREADS", to: "1"),
                 .define("GIT_QSORT_BSD", to: "1"),
                 .define("GIT_IO_POLL", to: "1"),
 
@@ -107,18 +133,22 @@ let package = Package(
                 .define("MAX_NAME_COUNT", to: "10000"),
 
                 // Git SSH transport configuration
-                .define("GIT_SSH", to: "1"),
-                .define("GIT_SSH_EXEC", to: "1"),
+                .define("GIT_SSH", to: "1", .when(traits: ["SSHExec", "LibSSH2"])),
+                .define("GIT_SSH_EXEC", to: "1", .when(traits: ["SSHExec"])),
+                .define("GIT_SSH_LIBSSH2", to: "1", .when(traits: ["LibSSH2"])),
+                .define("GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS", to: "1", .when(traits: ["LibSSH2"])),
 
                 // Git HTTPS transport configuration
                 .define("GIT_HTTPS", to: "1"),
                 .define("GIT_HTTPPARSER_BUILTIN", to: "1"),
-                .define("GIT_SECURE_TRANSPORT", to: "1"),
+                .define("GIT_SECURE_TRANSPORT", to: "1", .when(traits: ["SecureTransport"])),
+                .define("GIT_OPENSSL", to: "1", .when(traits: ["OpenSSL"])),
 
                 // Git cryptography configuration
                 .define("GIT_SHA1_COMMON_CRYPTO", to: "1"),
                 .define("GIT_SHA256_COMMON_CRYPTO", to: "1"),
             ]
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

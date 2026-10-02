@@ -7,7 +7,7 @@
 >
 > * The Carthage configuration and Xcode project are gone and are longer supported.
 > * SwiftGit2 must now be explicitly initialized by the application by calling `SwiftGit2Init()`. Its resources may be cleaned up again using `SwiftGit2Shutdown()`.
-> * The dependency libssh2 is not yet integrated. The impact is that SwiftGit2 on iOS cannot interact with remote repositories over SSH. (Remotes that use HTTPS are supported using the HTTP client that ships with libgit2.)
+> * SSH remotes on iOS require the `LibSSH2` trait, see [Choosing the HTTPS and SSH backends](#choosing-the-https-and-ssh-backends).
 
 [![Build Status](https://github.com/SwiftGit2/SwiftGit2/actions/workflows/BuildPR.yml/badge.svg)](https://github.com/SwiftGit2/SwiftGit2/actions)
 [![GitHub release](https://img.shields.io/github/release/SwiftGit2/SwiftGit2.svg)](https://github.com/SwiftGit2/SwiftGit2/releases)
@@ -71,6 +71,27 @@ And don't forget to reference it from your target:
 
 ```swift
 .target(name: "YourProject", dependencies: ["SwiftGit2"]),
+```
+
+### Choosing the HTTPS and SSH backends
+
+By default SwiftGit2 talks HTTPS through Apple's Security framework and SSH by running the system `ssh` executable, which means SSH remotes do not work on iOS. Enable the `OpenSSL` and `LibSSH2` [package traits](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0450-swiftpm-package-traits.md) to link precompiled [OpenSSL](https://github.com/mbernson/OpenSSL-Apple) and [libssh2](https://github.com/mbernson/libssh2-Apple) instead. This requires Swift 6.1 (Xcode 16.3) or later.
+
+```swift
+// HTTPS through OpenSSL, SSH through libssh2 (works on iOS):
+.package(url: "https://github.com/SwiftGit2/SwiftGit2.git", from: "1.0.0", traits: ["LibSSH2"])
+
+// HTTPS through OpenSSL, SSH through the system ssh executable:
+.package(url: "https://github.com/SwiftGit2/SwiftGit2.git", from: "1.0.0", traits: ["OpenSSL", "SSHExec"])
+```
+
+libgit2 compiles exactly one backend of each kind, so listing traits replaces the defaults rather than adding to them. The available traits are `SecureTransport` (default), `OpenSSL`, `SSHExec` (default) and `LibSSH2`, where `LibSSH2` implies `OpenSSL`.
+
+OpenSSL cannot use the system keychain to verify server certificates. On macOS it reads the system CA bundle at `/etc/ssl/cert.pem`. iOS has no CA bundle on disk, so an app using the `OpenSSL` or `LibSSH2` trait on iOS must ship one (for example [Mozilla's bundle](https://curl.se/docs/caextract.html)) and register it before the first HTTPS operation:
+
+```swift
+SwiftGit2Init()
+SwiftGit2SetSSLCertificateLocations(file: Bundle.main.url(forResource: "cacert", withExtension: "pem"), directory: nil)
 ```
 
 ## Developing SwiftGit2

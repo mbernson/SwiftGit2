@@ -10,7 +10,7 @@ import SwiftGit2
 import Testing
 
 @Suite("OID") class OIDSpec {
-    @Suite("OID(string:)") struct InitializeWithString {
+    @Suite("OID(string:)") class InitializeWithString: Libgit2Spec {
         @Test("should be nil if string is too short") func tooShort() {
             #expect(OID(string: "123456789012345678901234567890123456789") == nil)
         }
@@ -28,14 +28,14 @@ import Testing
         }
     }
 
-    @Suite("OID(oid)") struct InitializeWithOID {
+    @Suite("OID(oid)") class InitializeWithOID: Libgit2Spec {
         @Test("should equal an OID with the same git_oid") func equal() throws {
             let oid = try #require(OID(string: "1234567890123456789012345678901234567890"))
             #expect(OID(oid.oid) == oid)
         }
     }
 
-    @Suite("OID.description") struct Description {
+    @Suite("OID.description") class Description: Libgit2Spec {
         @Test("should return the SHA") func sha() throws {
             let SHA = "1234567890123456789012345678901234567890"
             let oid = try #require(OID(string: SHA))
@@ -43,7 +43,7 @@ import Testing
         }
     }
 
-    @Suite("==(OID, OID)") struct Equality {
+    @Suite("==(OID, OID)") class Equality: Libgit2Spec {
         @Test("should be equal when identical") func equal() throws {
             let SHA = "1234567890123456789012345678901234567890"
             let oid1 = try #require(OID(string: SHA))
@@ -58,7 +58,7 @@ import Testing
         }
     }
 
-    @Suite("OID.hashValue") struct HashValue {
+    @Suite("OID.hashValue") class HashValue: Libgit2Spec {
         @Test("should be equal when OIDs are equal") func equal() throws {
             let SHA = "1234567890123456789012345678901234567890"
             let oid1 = try #require(OID(string: SHA))
