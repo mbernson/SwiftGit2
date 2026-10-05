@@ -22,12 +22,18 @@ public enum Credentials {
 	case plaintext(username: String, password: String)
 	case sshMemory(username: String, publicKey: String, privateKey: String, passphrase: String)
 
+	/// libgit2 invokes the credentials callback once per authentication attempt, so the payload is only
+	/// borrowed here and released by `release(_:)` once the operation that owns it has finished.
 	internal static func fromPointer(_ pointer: UnsafeMutableRawPointer) -> Credentials {
-		return Unmanaged<Wrapper<Credentials>>.fromOpaque(UnsafeRawPointer(pointer)).takeRetainedValue().value
+		return Unmanaged<Wrapper<Credentials>>.fromOpaque(UnsafeRawPointer(pointer)).takeUnretainedValue().value
 	}
 
 	internal func toPointer() -> UnsafeMutableRawPointer {
 		return Unmanaged.passRetained(Wrapper(self)).toOpaque()
+	}
+
+	internal static func release(_ pointer: UnsafeMutableRawPointer) {
+		Unmanaged<Wrapper<Credentials>>.fromOpaque(UnsafeRawPointer(pointer)).release()
 	}
 }
 
@@ -50,7 +56,8 @@ internal func credentialsCallback(
 	case .default:
 		result = git_cred_default_new(cred)
 	case .sshAgent:
-		result = git_cred_ssh_key_from_agent(cred, name!)
+		guard let name else { return -1 }
+		result = git_cred_ssh_key_from_agent(cred, name)
 	case .plaintext(let username, let password):
 		result = git_cred_userpass_plaintext_new(cred, username, password)
 	case .sshMemory(let username, let publicKey, let privateKey, let passphrase):
