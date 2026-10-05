@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "SwiftGit2",
     platforms: [
-        .macOS(.v10_13),
+        .macOS(.v10_14),
         .iOS("15.5"),
         .tvOS(.v13),
         .visionOS(.v1),
@@ -21,10 +21,11 @@ let package = Package(
     // enabling OpenSSL or LibSSH2 replaces them rather than adding to them.
     traits: [
         .trait(name: "SecureTransport", description: "HTTPS through Apple's Security framework."),
+        .trait(name: "NetworkFramework", description: "HTTPS through Apple's Network framework."),
         .trait(name: "SSHExec", description: "SSH by running the system ssh executable. Not available on iOS."),
         .trait(name: "OpenSSL", description: "HTTPS through precompiled OpenSSL."),
         .trait(name: "LibSSH2", description: "SSH through precompiled libssh2.", enabledTraits: ["OpenSSL"]),
-        .default(enabledTraits: ["SecureTransport", "SSHExec"]),
+        .default(enabledTraits: ["NetworkFramework", "SSHExec"]),
     ],
     dependencies: [
         .package(url: "https://github.com/ZipArchive/ZipArchive.git", from: "2.5.5"),
@@ -151,6 +152,7 @@ let package = Package(
                 .define("GIT_HTTPS", to: "1"),
                 .define("GIT_HTTPPARSER_BUILTIN", to: "1"),
                 .define("GIT_SECURE_TRANSPORT", to: "1", .when(traits: ["SecureTransport"])),
+                .define("GIT_NETWORK_FRAMEWORK", to: "1", .when(traits: ["NetworkFramework"])),
                 .define("GIT_OPENSSL", to: "1", .when(traits: ["OpenSSL"])),
 
                 // Git cryptography configuration
@@ -159,6 +161,7 @@ let package = Package(
             ],
             linkerSettings: [
                 .linkedLibrary("iconv"),
+                .linkedFramework("Network", .when(traits: ["NetworkFramework"])),
             ]
         ),
     ],
