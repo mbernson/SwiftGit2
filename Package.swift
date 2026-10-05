@@ -116,6 +116,15 @@ let package = Package(
                 .define("GIT_THREADS", to: "1"),
                 .define("GIT_QSORT_BSD", to: "1"),
                 .define("GIT_IO_POLL", to: "1"),
+                .define("GIT_USE_FUTIMENS", to: "1"),
+                .define("GIT_COMPRESSION_BUILTIN", to: "1"),
+
+                // Nanosecond timestamps in the index, as git itself records them
+                .define("GIT_USE_NSEC", to: "1"),
+                .define("GIT_USE_STAT_MTIMESPEC", to: "1"),
+
+                // Precomposed Unicode filename handling (core.precomposeunicode)
+                .define("GIT_USE_ICONV", to: "1"),
 
                 // Git regex configuration
                 .define("GIT_REGEX_BUILTIN", to: "1"),
@@ -147,6 +156,9 @@ let package = Package(
                 // Git cryptography configuration
                 .define("GIT_SHA1_COMMON_CRYPTO", to: "1"),
                 .define("GIT_SHA256_COMMON_CRYPTO", to: "1"),
+            ],
+            linkerSettings: [
+                .linkedLibrary("iconv"),
             ]
         ),
     ],
