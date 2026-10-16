@@ -40,12 +40,22 @@ public enum Credentials {
 /// Handle the request of credentials, passing through to a wrapped block after converting the arguments.
 /// Converts the result to the correct error code required by libgit2 (0 = success, 1 = rejected setting creds,
 /// -1 = error)
+///
+/// ```
+/// typedef int GIT_CALLBACK(git_credential_acquire_cb)(
+/// git_credential **out,
+///    const char *url,
+///    const char *username_from_url,
+///    unsigned int allowed_types,
+///    void *payload);
+/// ```
 internal func credentialsCallback(
 	cred: UnsafeMutablePointer<UnsafeMutablePointer<git_cred>?>?,
 	url: UnsafePointer<CChar>?,
 	username: UnsafePointer<CChar>?,
-	_: UInt32,
-	payload: UnsafeMutableRawPointer? ) -> Int32 {
+	allowedTypes: UInt32,
+	payload: UnsafeMutableRawPointer?
+) -> Int32 {
 
 	let result: Int32
 

@@ -61,11 +61,9 @@ let package = Package(
             exclude: [
                 "deps/llhttp/CMakeLists.txt",
                 "deps/llhttp/LICENSE-MIT",
-                "deps/pcre/CMakeLists.txt",
-                "deps/pcre/COPYING",
-                "deps/pcre/LICENCE",
-                "deps/pcre/cmake",
-                "deps/pcre/config.h.in",
+				"deps/pcre2/CMakeLists.txt",
+				"deps/pcre2/LICENCE.md",
+				"deps/pcre2/config.h.in",
                 "deps/xdiff/CMakeLists.txt",
                 "deps/zlib/CMakeLists.txt",
                 "deps/zlib/LICENSE",
@@ -87,7 +85,7 @@ let package = Package(
             ],
             sources: [
                 "deps/llhttp",
-                "deps/pcre",
+                "deps/pcre2",
                 "deps/xdiff",
                 "deps/zlib",
                 "src/libgit2",
@@ -105,57 +103,108 @@ let package = Package(
                 ]),
 
                 .headerSearchPath("deps/llhttp"),
-                .headerSearchPath("deps/pcre"),
+                .headerSearchPath("deps/pcre2"),
                 .headerSearchPath("deps/xdiff"),
                 .headerSearchPath("deps/zlib"),
                 .headerSearchPath("src/libgit2"),
                 .headerSearchPath("src/util"),
 
+				/* libgit2 configuration flags */
+
+				// Don't try to include `git2_features.h`. We define configuration options here instead.
                 .define("LIBGIT2_NO_FEATURES_H"),
-                .define("GIT_ARCH_64", to: "1"),
-                .define("GIT_THREADS", to: "1"),
-                .define("GIT_QSORT_BSD", to: "1"),
-                .define("GIT_IO_POLL", to: "1"),
-                .define("GIT_USE_FUTIMENS", to: "1"),
-                .define("GIT_COMPRESSION_BUILTIN", to: "1"),
 
-                // Nanosecond timestamps in the index, as git itself records them
-                .define("GIT_USE_NSEC", to: "1"),
-                .define("GIT_USE_STAT_MTIMESPEC", to: "1"),
+				/* Debugging options */
 
-                // Precomposed Unicode filename handling (core.precomposeunicode)
-                .define("GIT_USE_ICONV", to: "1"),
+				// .define("GIT_DEBUG_POOL", to: "1"),
+				// .define("GIT_DEBUG_STRICT_ALLOC", to: "1"),
+				// .define("GIT_DEBUG_STRICT_OPEN", to: "1"),
+				// .define("GIT_DEBUG_LEAKCHECK_WIN32", to: "1"),
 
-                // Git regex configuration
-                .define("GIT_REGEX_BUILTIN", to: "1"),
-                .define("PCRE_LINK_SIZE", to: "2"),
-                .define("SUPPORT_PCRE8", to: "1"),
-                .define("LINK_SIZE", to: "2"),
-                .define("PARENS_NEST_LIMIT", to: "250"),
-                .define("MATCH_LIMIT", to: "10000000"),
-                .define("MATCH_LIMIT_RECURSION", to: "10000000"),
-                .define("NEWLINE", to: "10"), // LF
-                .define("NO_RECURSE", to: "1"),
-                .define("POSIX_MALLOC_THRESHOLD", to: "10"),
-                .define("BSR_ANYCRLF", to: "0"),
-                .define("MAX_NAME_SIZE", to: "32"),
-                .define("MAX_NAME_COUNT", to: "10000"),
+				/* Feature enablement and provider / backend selection */
 
-                // Git SSH transport configuration
-                .define("GIT_SSH", to: "1", .when(traits: ["SSHExec", "LibSSH2"])),
-                .define("GIT_SSH_EXEC", to: "1", .when(traits: ["SSHExec"])),
-                .define("GIT_SSH_LIBSSH2", to: "1", .when(traits: ["LibSSH2"])),
-                .define("GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS", to: "1", .when(traits: ["LibSSH2"])),
+				.define("GIT_THREADS", to: "1"),
+				.define("GIT_THREADS_PTHREADS", to: "1"),
+				// .define("GIT_THREADS_WIN32", to: "1"),
 
-                // Git HTTPS transport configuration
-                .define("GIT_HTTPS", to: "1"),
-                .define("GIT_HTTPPARSER_BUILTIN", to: "1"),
-                .define("GIT_SECURE_TRANSPORT", to: "1", .when(traits: ["SecureTransport"])),
-                .define("GIT_OPENSSL", to: "1", .when(traits: ["OpenSSL"])),
+				// .define("GIT_SHA1_BUILTIN", to: "1"),
+				// .define("GIT_SHA1_OPENSSL", to: "1"),
+				.define("GIT_SHA1_COMMON_CRYPTO", to: "1"),
 
-                // Git cryptography configuration
-                .define("GIT_SHA1_COMMON_CRYPTO", to: "1"),
-                .define("GIT_SHA256_COMMON_CRYPTO", to: "1"),
+				// .define("GIT_SHA256_BUILTIN", to: "1"),
+				.define("GIT_SHA256_COMMON_CRYPTO", to: "1"),
+				// .define("GIT_SHA256_OPENSSL", to: "1"),
+
+				.define("GIT_COMPRESSION_BUILTIN", to: "1"),
+				// .define("GIT_COMPRESSION_ZLIB", to: "1"),
+
+				.define("GIT_NSEC", to: "1"),
+				.define("GIT_NSEC_MTIM", to: "1"),
+				.define("GIT_NSEC_MTIMESPEC", to: "1"),
+				.define("GIT_NSEC_MTIME_NSEC", to: "1"),
+
+				.define("GIT_USE_STAT_MTIM", to: "1"),
+				.define("GIT_USE_STAT_MTIMESPEC", to: "1"),
+				.define("GIT_USE_STAT_MTIME_NSEC", to: "1"),
+
+
+				.define("GIT_I18N", to: "1"),
+				.define("GIT_I18N_ICONV", to: "1"),
+
+				.define("GIT_REGEX_BUILTIN", to: "1"),
+
+				.define("PCRE2_STATIC", to: "1"),
+				.define("PCRE2_EXPORT", to: ""),
+				.define("PCRE2_EXP_DECL", to: ""),
+				.define("PCRE2_EXP_DEFN", to: ""),
+				.define("PCRE2_CODE_UNIT_WIDTH", to: "8"),
+
+				.define("MAX_NAME_SIZE", to: "128"),
+				.define("MAX_NAME_COUNT", to: "10000"),
+				.define("SUPPORT_PCRE2_8", to: "1"),
+				.define("SUPPORT_UNICODE", to: "1"),
+				.define("NEWLINE", to: "LF"),
+				.define("NEWLINE_DEFAULT", to: "2"),
+				.define("LINK_SIZE", to: "2"),
+				.define("MAX_VARLOOKBEHIND", to: "255"),
+				.define("PARENS_NEST_LIMIT", to: "250"),
+				.define("HEAP_LIMIT", to: "20000000"),
+				.define("MATCH_LIMIT", to: "10000000"),
+				.define("MATCH_LIMIT_DEPTH", to: "MATCH_LIMIT"),
+
+				.define("GIT_SSH", to: "1", .when(traits: ["SSHExec", "LibSSH2"])),
+				.define("GIT_SSH_EXEC", to: "1", .when(traits: ["SSHExec"])),
+				.define("GIT_SSH_LIBSSH2", to: "1", .when(traits: ["LibSSH2"])),
+				.define("GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS", to: "1", .when(traits: ["LibSSH2"])),
+
+				.define("GIT_HTTP", to: "1"),
+
+				.define("GIT_HTTPS", to: "1"),
+				.define("GIT_HTTPS_OPENSSL", to: "1", .when(traits: ["OpenSSL"])),
+				.define("GIT_HTTPS_SECURETRANSPORT", to: "1", .when(traits: ["SecureTransport"])),
+
+				.define("GIT_HTTPPARSER_BUILTIN", to: "1"),
+
+				.define("GIT_AUTH_NTLM", to: "1"),
+				.define("GIT_AUTH_NTLM_BUILTIN", to: "1"),
+
+				.define("GIT_AUTH_NEGOTIATE", to: "1"),
+				.define("GIT_AUTH_NEGOTIATE_GSSFRAMEWORK", to: "1"),
+
+				/* Platform details */
+
+				.define("GIT_ARCH_64", to: "1"),
+
+				.define("GIT_QSORT_BSD", to: "1"),
+
+				.define("GIT_FUTIMENS", to: "1"),
+				.define("GIT_USE_FUTIMENS", to: "1"),
+
+				// .define("GIT_RAND_GETENTROPY", to: "1"),
+				.define("GIT_RAND_GETLOADAVG", to: "1"),
+
+				.define("GIT_IO_POLL", to: "1"),
+				.define("GIT_IO_SELECT", to: "1"),
             ],
             linkerSettings: [
                 .linkedLibrary("iconv"),

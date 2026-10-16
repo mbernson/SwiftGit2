@@ -23,7 +23,36 @@ private let hasSSHEnabled = false
 #endif
 
 /// GitHub requires authentication for SSH even on public repositories, so the SSH clone needs a key in an agent.
-private let hasSSHAgent = ProcessInfo.processInfo.environment["SSH_AUTH_SOCK"] != nil
+/// libgit2 keeps retrying agent authentication when the agent holds no key, so an empty agent would hang the test.
+/// Other Apple platforms cannot launch `ssh-add` and have no agent of their own, so the test only runs on macOS.
+private func hasSSHAgentIdentity() -> Bool {
+	#if os(macOS)
+	guard ProcessInfo.processInfo.environment["SSH_AUTH_SOCK"] != nil else { return false }
+
+	let process = Process()
+	process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh-add")
+	process.arguments = ["-l"]
+	process.standardOutput = FileHandle.nullDevice
+	process.standardError = FileHandle.nullDevice
+
+	let terminated = DispatchSemaphore(value: 0)
+	process.terminationHandler = { _ in terminated.signal() }
+	do {
+		try process.run()
+	} catch {
+		return false
+	}
+
+	// A stale agent socket can accept the connection and never answer.
+	guard terminated.wait(timeout: .now() + 5) == .success else {
+		process.terminate()
+		return false
+	}
+	return process.terminationStatus == 0
+	#else
+	return false
+	#endif
+}
 
 // swiftlint:disable cyclomatic_complexity
 
@@ -136,9 +165,15 @@ private let hasSSHAgent = ProcessInfo.processInfo.environment["SSH_AUTH_SOCK"] !
             try cloneRemoteRepository(url: url, credentials: .default)
         }
 
-		@Test("should be able to clone a remote repository over SSH", .enabled(if: hasSSHEnabled && hasSSHAgent), .disabled("Hangs forever when there is an SSH agent"), arguments: [
-            URL(string: "ssh://git@github.com/libgit2/TestGitRepository.git"),
-        ])
+		@Test(
+			"should be able to clone a remote repository over SSH",
+			.enabled(if: hasSSHEnabled),
+			.enabled(if: hasSSHAgentIdentity(), "Requires a key in the SSH agent"),
+			.timeLimit(.minutes(1)),
+			arguments: [
+				URL(string: "ssh://git@github.com/libgit2/TestGitRepository.git"),
+			]
+		)
         func cloneRemoteRepositorySSH(url: URL?) throws {
             try cloneRemoteRepository(url: url, credentials: .sshAgent)
         }
